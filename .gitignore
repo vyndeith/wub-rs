@@ -1,0 +1,10 @@
+/target
+/.idea
+hello.txt
+
+# local development / porting notes, not part of the published project
+CLAUDE.md
+PORT_PLAN.md
+HANDOFF.md
+KICKOFF_PROMPT.md
+/reference
