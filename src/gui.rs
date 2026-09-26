@@ -18,9 +18,10 @@ const EM_REPLACESEL: u32 = 0x00C2;
 const ODS_SELECTED_BIT: u32 = 0x0001;
 
 const ID_ENABLE: usize = 1;
-const ID_DISABLE: usize = 2;
-const ID_CHECK: usize = 3;
-const ID_EDIT: usize = 4;
+const ID_FULL: usize = 2;
+const ID_DISABLE: usize = 3;
+const ID_CHECK: usize = 4;
+const ID_EDIT: usize = 5;
 
 const WM_APPEND: u32 = WM_APP + 1;
 const WM_DONE: u32 = WM_APP + 2;
@@ -120,8 +121,8 @@ unsafe fn layout(hwnd: HWND) {
     let h = rc.bottom - rc.top;
     let pad = 10;
     let bh = 40;
-    let bw = (w - pad * 4) / 3;
-    for (i, id) in [ID_ENABLE, ID_DISABLE, ID_CHECK].iter().enumerate() {
+    let bw = (w - pad * 5) / 4;
+    for (i, id) in [ID_ENABLE, ID_FULL, ID_DISABLE, ID_CHECK].iter().enumerate() {
         if let Ok(btn) = GetDlgItem(Some(hwnd), *id as i32) {
             let x = pad + (bw + pad) * i as i32;
             let _ = MoveWindow(btn, x, pad, bw, bh, true);
@@ -161,10 +162,13 @@ fn start_worker(hwnd: HWND, id: usize) {
                 LPARAM(boxed as isize),
             );
         });
-        let o = wublocker::Options::default();
         match id {
-            ID_ENABLE => wublocker::enable(&o),
-            ID_DISABLE => wublocker::disable(&o),
+            ID_ENABLE => wublocker::enable(&wublocker::Options {
+                no_store_repair: true,
+                ..Default::default()
+            }),
+            ID_FULL => wublocker::enable(&wublocker::Options::default()),
+            ID_DISABLE => wublocker::disable(&wublocker::Options::default()),
             ID_CHECK => wublocker::check(),
             _ => {}
         }
@@ -176,7 +180,7 @@ fn start_worker(hwnd: HWND, id: usize) {
 }
 
 unsafe fn enable_buttons(hwnd: HWND, on: bool) {
-    for id in [ID_ENABLE, ID_DISABLE, ID_CHECK] {
+    for id in [ID_ENABLE, ID_FULL, ID_DISABLE, ID_CHECK] {
         if let Ok(b) = GetDlgItem(Some(hwnd), id as i32) {
             let _ = EnableWindow(b, on);
         }
@@ -189,6 +193,7 @@ extern "system" fn wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> LRES
             WM_CREATE => {
                 let hinst = GetModuleHandleW(None).unwrap().0 as isize;
                 make_button(hwnd, ID_ENABLE, w!("Enable"), hinst);
+                make_button(hwnd, ID_FULL, w!("Full"), hinst);
                 make_button(hwnd, ID_DISABLE, w!("Disable"), hinst);
                 make_button(hwnd, ID_CHECK, w!("Check"), hinst);
                 let edit = CreateWindowExW(
@@ -221,7 +226,9 @@ extern "system" fn wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> LRES
             WM_COMMAND => {
                 let id = (wp.0 & 0xFFFF) as usize;
                 let code = (wp.0 >> 16) as u32;
-                if code == BN_CLICKED && (id == ID_ENABLE || id == ID_DISABLE || id == ID_CHECK) {
+                if code == BN_CLICKED
+                    && (id == ID_ENABLE || id == ID_FULL || id == ID_DISABLE || id == ID_CHECK)
+                {
                     enable_buttons(hwnd, false);
                     start_worker(hwnd, id);
                 }
@@ -237,6 +244,7 @@ extern "system" fn wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> LRES
                 SetTextColor(dis.hDC, COLORREF(TEXT));
                 let label = match dis.CtlID as usize {
                     ID_ENABLE => "Enable",
+                    ID_FULL => "Full",
                     ID_DISABLE => "Disable",
                     ID_CHECK => "Check",
                     _ => "",

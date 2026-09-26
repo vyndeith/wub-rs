@@ -1,9 +1,15 @@
 use crate::{reg, svc};
+use std::os::windows::process::CommandExt;
 use std::path::Path;
 use std::process::Command;
 
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
 fn run(exe: &str, args: &[&str]) {
-    let _ = Command::new(exe).args(args).output();
+    let _ = Command::new(exe)
+        .args(args)
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
 }
 
 fn system_root() -> String {
