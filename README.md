@@ -15,7 +15,15 @@ care about. It requires administrator rights and elevates itself.
 The build is unsigned, so SmartScreen and some antivirus products will flag it. That is
 expected for this kind of tool.
 
-## Usage
+## Executables
+
+The build produces two binaries:
+
+- `wu-blocker.exe` - command line.
+- `wu-blocker-gui.exe` - a small dark GUI with three buttons (Enable, Disable, Check)
+  and a console pane that shows progress. Both self-elevate.
+
+## Usage (CLI)
 
 ```
 wu-blocker.exe Disable
@@ -66,10 +74,30 @@ Requires a Rust toolchain (stable, MSVC target).
 cargo build --release
 ```
 
-The output is `target/release/wu-blocker.exe`. The C runtime is linked statically
-(`.cargo/config.toml`), so the exe is self-contained and needs no VC++ redistributable.
+The binaries are in `target/release/`. The C runtime is linked statically
+(`.cargo/config.toml`), so they are self-contained and need no VC++ redistributable.
 
 Prebuilt binaries are produced by the GitHub Actions build workflow (see the Actions tab).
+
+## Use as a library
+
+The crate also builds as a library (`wublocker`). The process must already run elevated.
+
+```rust
+use wublocker::{disable, enable, check, is_elevated, Options};
+
+fn main() {
+    if !is_elevated() { return; }
+    disable(&Options::default());
+    // enable(&Options::default());
+    // check();
+}
+```
+
+`Options` has `deep_repair`, `refresh_baseline`, `no_cache_reset`, `no_store_repair`
+(all default false). Progress and errors go to stderr by default; call
+`wublocker::set_sink(|line| ...)` to capture them instead (this is how the GUI feeds its
+console pane).
 
 ## Verify
 
